@@ -1,0 +1,7 @@
+/asm
+/build
+/.vscode
+
+*.z64
+
+*.ps1
