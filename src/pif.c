@@ -34,6 +34,20 @@ static void exception_handler(exception_t *ex) {
 // I (Jhynjhiruu) make no guarantees about the state of libdragon, your N64 or your house's electrical
 // system after calling this function! It's undefined behaviour in so many ways, and is likely the bit
 // that's broken if this program stops working at some point in the future. It's also critical.
+__attribute__((noinline)) void nasty_hack(void) {
+    // very naughty! also probably undefined behaviour but That's Fine™
+    // we go into a loop, but not in C so that GCC doesn't optimise the rest away,
+    // then put a label here so we can jump here from the exception handler,
+    // set t1 as clobbered because IPL1 clobbers it,
+    // and set cc and memory as clobbered just in case (probably not necessary)
+    __asm__ volatile("j .\n"
+                     // we have reordering turned on, so no need for a nop here
+                     "__nasty_label_hack:\n"
+                     : // no inputs
+                     : // no outputs
+                     : "t1", "cc", "memory");
+}
+
 void hang_pif(void (*reset_callback)(), void (*setup_callback)(void)) {
     // IPL1 clobbers Status, so save it
     sr = C0_STATUS();
@@ -61,17 +75,7 @@ void hang_pif(void (*reset_callback)(), void (*setup_callback)(void)) {
 
     MEMORY_BARRIER();
 
-    // very naughty! also probably undefined behaviour but That's Fine™
-    // we go into a loop, but not in C so that GCC doesn't optimise the rest away,
-    // then put a label here so we can jump here from the exception handler,
-    // set t1 as clobbered because IPL1 clobbers it,
-    // and set cc and memory as clobbered just in case (probably not necessary)
-    __asm__ volatile("j .\n"
-                     // we have reordering turned on, so no need for a nop here
-                     "__nasty_label_hack:\n"
-                     : // no inputs
-                     : // no outputs
-                     : "t1", "cc", "memory");
+    nasty_hack();
 
     MEMORY_BARRIER();
 

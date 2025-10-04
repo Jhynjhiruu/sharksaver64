@@ -196,12 +196,22 @@ void read_fw(const char *path) {
             inputs = joypad_get_inputs(JOYPAD_PORT_1);
 
             if (INPUT(btn.a)) {
-                while (INPUT(btn.a)) {
-                    continue;
-                }
                 break;
             }
         }
+
+        while (true) {
+            joypad_poll();
+            prev_inputs = inputs;
+            inputs = joypad_get_inputs(JOYPAD_PORT_1);
+
+            if (!INPUT(btn.a)) {
+                break;
+            }
+        }
+
+        printf("read id\n");
+        console_render();
 
         const uint32_t ids = read_ids();
 
@@ -256,9 +266,16 @@ void read_fw(const char *path) {
             inputs = joypad_get_inputs(JOYPAD_PORT_1);
 
             if (INPUT(btn.a)) {
-                while (INPUT(btn.a)) {
-                    continue;
-                }
+                break;
+            }
+        }
+
+        while (true) {
+            joypad_poll();
+            prev_inputs = inputs;
+            inputs = joypad_get_inputs(JOYPAD_PORT_1);
+
+            if (!INPUT(btn.a)) {
                 break;
             }
         }
@@ -271,7 +288,7 @@ void read_fw(const char *path) {
         console_render();
     }
 
-    const int fw = creat(path, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
+    const int fw = open(path, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
     if (fw == -1) {
         printf("Failed to create %s\nErrno: %d (%s)\n", path, errno, strerror(errno));
         console_render();
@@ -356,7 +373,7 @@ int main(void) {
         num_options++;
     }
 
-    if (/*has_sd*/true) {
+    if (/*has_sd*/ true) {
         options[num_options] = "Dump fw.bin from GameShark to SD card";
         modes[num_options] = READ_SD;
         num_options++;
