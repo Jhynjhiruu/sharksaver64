@@ -40,6 +40,19 @@ int main(void) {
         path = ROM_PATH;
     }
 
+    if (path == PATH) {
+        const int f = open(path, O_RDONLY);
+        if (f == -1) {
+            printf("%s not found, using firmware from ROM\n", path);
+            console_render();
+
+            path = ROM_PATH;
+        } else if (close(f) == -1) {
+            printf("Failed to close %s\nErrno: %d (%s)\n", path, errno, strerror(errno));
+            console_render();
+        }
+    }
+
     const int fw = open(path, O_RDONLY);
     if (fw == -1) {
         printf("Failed to open %s\nErrno: %d (%s)\n", path, errno, strerror(errno));
