@@ -31,27 +31,10 @@ static void exception_handler(exception_t *ex) {
     ex->regs->t1 = 0xA5A5A5A55A5A5A5A;
 }
 
-void hang_pif(void (*reset_callback)(), void (*setup_callback)(void)) {
-    // IPL1 clobbers Status, so save it
-    sr = C0_STATUS();
-
-    // install our custom exception handler so we can trap the Watch exception
-    old_exception_handler = register_exception_handler(exception_handler);
-
-    if (reset_callback != NULL) {
-        set_RESET_interrupt(true);
-        register_RESET_handler(reset_callback);
-    } else {
-        set_RESET_interrupt(false);
-    }
-
-    // set the watchpoint for reads (1 << 1) to SP_STATUS
-    C0_WRITE_WATCHLO(PhysicalAddr(SP_STATUS) | (1 << 1));
-
-    if (setup_callback != NULL) {
-        setup_callback();
-    }
-
+// I (Jhynjhiruu) make no guarantees about the state of libdragon, your N64 or your house's electrical
+// system after calling this function! It's undefined behaviour in so many ways, and is likely the bit
+// that's broken if this program stops working at some point in the future. It's also critical.
+__attribute__((noinline)) void nasty_hack(void) {
     // very naughty! also probably undefined behaviour but That's Fine™
     // we go into a loop, but not in C so that GCC doesn't optimise the rest away,
     // then put a label here so we can jump here from the exception handler,
@@ -63,6 +46,38 @@ void hang_pif(void (*reset_callback)(), void (*setup_callback)(void)) {
                      : // no inputs
                      : // no outputs
                      : "t1", "cc", "memory");
+}
+
+void hang_pif(void (*reset_callback)(), void (*setup_callback)(void)) {
+    // IPL1 clobbers Status, so save it
+    sr = C0_STATUS();
+
+    MEMORY_BARRIER();
+
+    // install our custom exception handler so we can trap the Watch exception
+    old_exception_handler = register_exception_handler(exception_handler);
+
+    if (reset_callback != NULL) {
+        set_RESET_interrupt(true);
+        register_RESET_handler(reset_callback);
+    } else {
+        set_RESET_interrupt(false);
+    }
+
+    MEMORY_BARRIER();
+
+    // set the watchpoint for reads (1 << 1) to SP_STATUS
+    C0_WRITE_WATCHLO(PhysicalAddr(SP_STATUS) | (1 << 1));
+
+    if (setup_callback != NULL) {
+        setup_callback();
+    }
+
+    MEMORY_BARRIER();
+
+    nasty_hack();
+
+    MEMORY_BARRIER();
 
     // disable the watchpoint so we don't get any spurious exceptions later
     C0_WRITE_WATCHLO(0);
