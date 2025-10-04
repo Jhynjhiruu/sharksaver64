@@ -1,6 +1,7 @@
 /asm
 /build
 /.vscode
+/.cache
 
 *.z64
 
